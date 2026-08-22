@@ -6,6 +6,24 @@ import { Countdown } from "@/components/countdown";
 import { SiteNav } from "@/components/site-nav";
 import { formatUsd } from "@/lib/money";
 import type { PublicState } from "@/lib/types";
+import { faviconFor } from "@/lib/urls";
+
+function ReignLogo({ src, hostname }: { src: string; hostname: string }) {
+  const fallback = faviconFor(hostname);
+  const [current, setCurrent] = useState(src);
+
+  useEffect(() => setCurrent(src), [src]);
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={current}
+      alt=""
+      onError={() => setCurrent((value) => (value === fallback ? value : fallback))}
+      className="size-14 rounded-lg bg-paper/10 object-contain p-1 md:size-20"
+    />
+  );
+}
 
 export function Takeover({ initial }: { initial: PublicState | null }) {
   const router = useRouter();
@@ -71,12 +89,7 @@ export function Takeover({ initial }: { initial: PublicState | null }) {
           >
             <div className="flex items-center gap-4">
               {live.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={live.logoUrl}
-                  alt=""
-                  className="size-14 rounded-lg bg-paper/10 object-contain p-1 md:size-20"
-                />
+                <ReignLogo src={live.logoUrl} hostname={live.hostname} />
               ) : null}
               <h1 className="font-display text-[18vw] leading-[0.8] tracking-wide text-paper sm:text-[12vw] md:text-[9rem]">
                 {live.hostname}

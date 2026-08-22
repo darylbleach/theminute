@@ -13,7 +13,12 @@ import {
   integrationIdentifier,
   WEBSITE_ADVERTISING_TAX_CODE,
 } from "@/lib/stripe";
-import { faviconFor, parsePlacementUrl, sanitizeTagline } from "@/lib/urls";
+import {
+  faviconFor,
+  parsePlacementUrl,
+  sanitizeLogoUrl,
+  sanitizeTagline,
+} from "@/lib/urls";
 
 export const runtime = "nodejs";
 
@@ -23,7 +28,7 @@ const bodySchema = z.object({
   email: z.string().email(),
   minutes: z.coerce.number().int().min(MIN_MINUTES).max(MAX_MINUTES),
   action: z.enum(["buy", "cut", "defend"]),
-  logoUrl: z.string().url().optional().nullable(),
+  logoUrl: z.string().optional().nullable(),
 });
 
 export async function POST(request: Request) {
@@ -44,9 +49,11 @@ export async function POST(request: Request) {
 
   let placement;
   let tagline;
+  let requestedLogo;
   try {
     placement = parsePlacementUrl(parsed.data.url);
     tagline = sanitizeTagline(parsed.data.tagline);
+    requestedLogo = sanitizeLogoUrl(parsed.data.logoUrl);
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Invalid placement." },
@@ -57,7 +64,7 @@ export async function POST(request: Request) {
   const email = parsed.data.email.trim().toLowerCase();
   const minutes = parsed.data.minutes;
   const action = parsed.data.action;
-  const logoUrl = parsed.data.logoUrl || faviconFor(placement.hostname);
+  const logoUrl = requestedLogo ?? faviconFor(placement.hostname);
 
   try {
     const quote = await withQueueLock(async (tx) => {

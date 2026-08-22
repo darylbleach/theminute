@@ -74,6 +74,51 @@ export function parsePlacementUrl(raw: string): PlacementUrl {
   };
 }
 
+const NON_IMAGE_EXTENSIONS = [".html", ".htm", ".php", ".asp", ".aspx"];
+
+export function sanitizeLogoUrl(raw: string | null | undefined) {
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (trimmed.length > 1024) {
+    throw new Error("That logo URL is too long.");
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);
+  } catch {
+    throw new Error("That logo URL is not valid.");
+  }
+
+  if (parsed.protocol !== "https:") {
+    throw new Error("Logos must be served over HTTPS.");
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error("Logo URLs cannot include credentials.");
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+  if (!hostname.includes(".")) {
+    throw new Error("Enter a real logo hostname.");
+  }
+  if (BLOCKED_HOSTS.has(hostname) || BLOCKED_HOSTS.has(hostname.replace(/^www\./, ""))) {
+    throw new Error("That logo host is not allowed.");
+  }
+  if (BLOCKED_HOST_SUFFIXES.some((suffix) => hostname.endsWith(suffix))) {
+    throw new Error("That logo host is not allowed.");
+  }
+
+  const path = parsed.pathname.toLowerCase();
+  if (NON_IMAGE_EXTENSIONS.some((extension) => path.endsWith(extension))) {
+    throw new Error("Link the image itself, not the page it sits on.");
+  }
+
+  parsed.hash = "";
+  return parsed.toString();
+}
+
 export function sanitizeTagline(raw: string, max = 140) {
   const tagline = raw.replace(/\s+/g, " ").trim();
   if (!tagline) {

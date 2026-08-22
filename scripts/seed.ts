@@ -6,7 +6,6 @@ import {
   FIRST_REIGN_TAGLINE,
   FIRST_REIGN_URL,
 } from "@/lib/config";
-import { minutesCostCents } from "@/lib/money";
 import { parsePlacementUrl } from "@/lib/urls";
 
 async function seed() {
@@ -43,7 +42,8 @@ async function seed() {
     startedAt: now,
     endsAt,
     status: "live",
-    dollarsPaidCents: minutesCostCents(minutes),
+    // Nobody paid for the placeholder, so the archive must not claim they did.
+    dollarsPaidCents: 0,
     isSeeded: true,
   });
 

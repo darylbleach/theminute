@@ -108,7 +108,11 @@ export function Takeover({ initial }: { initial: PublicState | null }) {
 
       <section className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-5 pb-10 pt-24 md:px-10 md:pt-28">
         <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-acid sm:text-[11px]">
-          {live ? "Currently holding the homepage" : "The clock is open"}
+          {live
+            ? live.isSeeded
+              ? "House slot · the clock is open"
+              : "Currently holding the homepage"
+            : "The clock is open"}
         </p>
 
         {live ? (
@@ -156,7 +160,9 @@ export function Takeover({ initial }: { initial: PublicState | null }) {
             <p>{formatUsd(state?.stats.grossCents ?? 0)} on the clock</p>
             <p>
               {live
-                ? `${live.clickCount} clicks · ${live.minutesPaid} min bought`
+                ? live.isSeeded
+                  ? `${live.clickCount} clicks · nobody paid for this slot`
+                  : `${live.clickCount} clicks · ${live.minutesPaid} min bought`
                 : lastPaid
                   ? "Nobody on the clock right now"
                   : "Waiting for the first paid takeover"}

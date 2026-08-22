@@ -10,6 +10,7 @@
     "test": "node --import tsx --test lib/money.test.ts",
     "db:push": "dotenv -e .env.local -- drizzle-kit push",
     "db:seed": "dotenv -e .env.local -- tsx scripts/seed.ts",
+    "house-ad": "dotenv -e .env.local -- tsx scripts/house-ad.ts",
     "db:studio": "dotenv -e .env.local -- drizzle-kit studio"
   },
   "dependencies": {

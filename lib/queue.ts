@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import { creditLedger, getDb, reigns, siteState, type Reign } from "@/db";
 import { contactEmail } from "./config";
 import { secondsBetween } from "./format";
@@ -365,7 +365,7 @@ export async function loadPublicState(): Promise<PublicState> {
   const db = getDb();
   await withQueueLock((tx) => advanceClock(tx));
 
-  const [site, liveRows, queued] = await Promise.all([
+  const [site, liveRows, queued, lastPaidRows] = await Promise.all([
     db.select().from(siteState).where(eq(siteState.id, 1)),
     db.select().from(reigns).where(eq(reigns.status, "live")).limit(1),
     db
@@ -373,9 +373,24 @@ export async function loadPublicState(): Promise<PublicState> {
       .from(reigns)
       .where(eq(reigns.status, "queued"))
       .orderBy(asc(reigns.queueSort), asc(reigns.createdAt)),
+    // Nobody paid for the seed and killed reigns were pulled for a reason, so
+    // neither earns a mention while the homepage is empty.
+    db
+      .select()
+      .from(reigns)
+      .where(
+        and(
+          eq(reigns.status, "archived"),
+          eq(reigns.isSeeded, false),
+          gt(reigns.dollarsPaidCents, 0),
+        ),
+      )
+      .orderBy(desc(reigns.endsAt))
+      .limit(1),
   ]);
 
   const live = liveRows[0] ?? null;
+  const lastPaid = lastPaidRows[0] ?? null;
   const now = new Date();
   const cut = quoteCut(queued);
   const liveRemainingSeconds = live?.endsAt
@@ -388,6 +403,7 @@ export async function loadPublicState(): Promise<PublicState> {
     killedReason: site[0]?.killedReason ?? null,
     contactEmail: contactEmail(),
     live: live ? toPublicReign(live) : null,
+    lastPaid: lastPaid ? toPublicReign(lastPaid) : null,
     queue: queued.map(toPublicReign),
     next: queued[0] ? toPublicReign(queued[0]) : null,
     stats: {

@@ -8,11 +8,32 @@ import { formatUsd } from "@/lib/money";
 import type { PublicState } from "@/lib/types";
 import { faviconFor } from "@/lib/urls";
 
+/**
+ * The headline is the whole product, so it must never run off the side of a
+ * phone. Bebas Neue is condensed at roughly 0.47em per glyph, so size the type
+ * to the longest unbreakable word rather than to the viewport alone. The 7.5vw
+ * floor stops a very long domain shrinking into illegibility: past that point
+ * it wraps instead.
+ */
+function Headline({ text, reservedPx }: { text: string; reservedPx: number }) {
+  const longestWord = text
+    .split(/\s+/)
+    .reduce((max, word) => Math.max(max, word.length), 1);
+  const widthBudget = `calc((100vw - ${reservedPx}px) / ${(longestWord * 0.47).toFixed(2)})`;
+
+  return (
+    <h1
+      className="font-display leading-[0.82] tracking-wide text-paper [overflow-wrap:anywhere]"
+      style={{ fontSize: `max(min(18vw, ${widthBudget}, 9rem), 7.5vw)` }}
+    >
+      {text}
+    </h1>
+  );
+}
+
 function ReignLogo({ src, hostname }: { src: string; hostname: string }) {
   const fallback = faviconFor(hostname);
   const [current, setCurrent] = useState(src);
-
-  useEffect(() => setCurrent(src), [src]);
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -20,7 +41,7 @@ function ReignLogo({ src, hostname }: { src: string; hostname: string }) {
       src={current}
       alt=""
       onError={() => setCurrent((value) => (value === fallback ? value : fallback))}
-      className="size-14 rounded-lg bg-paper/10 object-contain p-1 md:size-20"
+      className="size-11 shrink-0 rounded-lg bg-paper/10 object-contain p-1 sm:size-14 md:size-20"
     />
   );
 }
@@ -64,7 +85,7 @@ export function Takeover({ initial }: { initial: PublicState | null }) {
   const next = state?.next ?? null;
 
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-ink text-paper">
+    <main className="relative flex min-h-dvh flex-col overflow-hidden bg-ink text-paper">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-40"
@@ -76,8 +97,8 @@ export function Takeover({ initial }: { initial: PublicState | null }) {
       />
       <SiteNav live={Boolean(live)} />
 
-      <section className="relative mx-auto flex min-h-dvh max-w-6xl flex-col justify-center px-5 pb-36 pt-24 md:px-10">
-        <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-acid">
+      <section className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-5 pb-10 pt-24 md:px-10 md:pt-28">
+        <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-acid sm:text-[11px]">
           {live ? "Currently holding the homepage" : "The clock is open"}
         </p>
 
@@ -85,44 +106,44 @@ export function Takeover({ initial }: { initial: PublicState | null }) {
           <a
             href={`/go/${live.id}`}
             rel="nofollow sponsored noopener"
-            className="group mt-4 block"
+            className="group mt-3 block md:mt-4"
           >
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 md:gap-4">
               {live.logoUrl ? (
-                <ReignLogo src={live.logoUrl} hostname={live.hostname} />
+                <ReignLogo
+                  key={live.logoUrl}
+                  src={live.logoUrl}
+                  hostname={live.hostname}
+                />
               ) : null}
-              <h1 className="font-display text-[18vw] leading-[0.8] tracking-wide text-paper sm:text-[12vw] md:text-[9rem]">
-                {live.hostname}
-              </h1>
+              <Headline text={live.hostname} reservedPx={live.logoUrl ? 108 : 48} />
             </div>
-            <p className="mt-6 max-w-3xl text-xl text-paper/80 md:text-3xl">
+            <p className="mt-5 max-w-3xl text-lg text-paper/80 sm:text-xl md:text-3xl">
               {live.tagline}
             </p>
           </a>
         ) : (
-          <div className="mt-4">
-            <h1 className="font-display text-[18vw] leading-[0.8] tracking-wide text-paper sm:text-[12vw] md:text-[9rem]">
-              BUY THE MINUTE
-            </h1>
-            <p className="mt-6 max-w-2xl text-xl text-paper/80 md:text-3xl">
+          <div className="mt-3 md:mt-4">
+            <Headline text="BUY THE MINUTE" reservedPx={48} />
+            <p className="mt-5 max-w-2xl text-lg text-paper/80 sm:text-xl md:text-3xl">
               $1 = 1 minute of this entire page. Nobody can take minutes you
               already paid for.
             </p>
           </div>
         )}
 
-        <div className="mt-10 flex flex-wrap items-end gap-8">
+        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-8 md:mt-10">
           <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-mute">
+            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-mute sm:text-[11px]">
               Time left
             </p>
             <Countdown
               endsAt={live?.endsAt ?? null}
               serverNow={state?.serverNow ?? new Date().toISOString()}
-              className="font-display text-7xl leading-none text-acid md:text-[9rem]"
+              className="font-display text-6xl leading-none text-acid sm:text-7xl md:text-[9rem]"
             />
           </div>
-          <div className="font-mono text-sm text-mute">
+          <div className="font-mono text-xs text-mute sm:text-sm">
             <p>{formatUsd(state?.stats.grossCents ?? 0)} on the clock</p>
             <p>
               {live
@@ -134,27 +155,27 @@ export function Takeover({ initial }: { initial: PublicState | null }) {
         </div>
       </section>
 
-      <footer className="absolute inset-x-0 bottom-0 z-20 border-t border-paper/15 bg-ink/80 p-4 backdrop-blur md:p-5">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-mute">
+      <footer className="relative z-20 border-t border-paper/15 bg-ink/80 p-4 backdrop-blur md:p-5">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+          <p className="font-mono text-[10px] uppercase leading-relaxed tracking-[0.18em] text-mute md:text-[11px]">
             $1 = 1 minute · min $5 · cutting the line pays the people you skip
           </p>
-          <div className="flex flex-wrap gap-3">
+          <div className="grid grid-cols-2 gap-2 md:flex md:gap-3">
             <a
               href="/buy?action=buy"
-              className="bg-acid px-5 py-3 font-display text-2xl tracking-wide text-ink"
+              className="col-span-2 bg-acid px-5 py-3 text-center font-display text-2xl tracking-wide text-ink md:col-span-1"
             >
               Buy minutes
             </a>
             <a
               href="/buy?action=cut"
-              className="border border-paper/30 px-5 py-3 font-display text-2xl tracking-wide text-paper"
+              className="border border-paper/30 px-5 py-3 text-center font-display text-xl tracking-wide text-paper md:text-2xl"
             >
               Cut the line
             </a>
             <a
               href="/buy?action=defend"
-              className="border border-hot px-5 py-3 font-display text-2xl tracking-wide text-hot"
+              className="border border-hot px-5 py-3 text-center font-display text-xl tracking-wide text-hot md:text-2xl"
             >
               Defend
             </a>

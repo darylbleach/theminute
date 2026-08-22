@@ -30,6 +30,10 @@ export default async function BuyPage({
             hits zero. Then the next paid URL slams in.
           </p>
           <p>
+            Logo is optional. Paste a link to your own PNG or SVG, or leave it
+            blank and we pull the favicon from your domain.
+          </p>
+          <p>
             Cutting the line costs 2× the remaining minutes of everyone you
             skip. 80% of that premium is credited to them. 20% is the house.
           </p>

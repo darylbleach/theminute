@@ -18,10 +18,25 @@ export function BuyForm({
   const [action, setAction] = useState<Action>(defaultAction);
   const [url, setUrl] = useState("");
   const [tagline, setTagline] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [logoBroken, setLogoBroken] = useState(false);
   const [email, setEmail] = useState("");
   const [minutes, setMinutes] = useState(MIN_MINUTES);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const logoPreview = useMemo(() => {
+    const trimmed = logoUrl.trim();
+    if (!trimmed) return null;
+    try {
+      const parsed = new URL(
+        trimmed.includes("://") ? trimmed : `https://${trimmed}`,
+      );
+      return parsed.protocol === "https:" ? parsed.toString() : null;
+    } catch {
+      return null;
+    }
+  }, [logoUrl]);
 
   const cut = state?.cutQuote;
   const estimate = useMemo(() => {
@@ -38,7 +53,7 @@ export function BuyForm({
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, tagline, email, minutes, action }),
+        body: JSON.stringify({ url, tagline, logoUrl, email, minutes, action }),
       });
       const payload = (await response.json()) as { url?: string; error?: string };
       if (!response.ok || !payload.url) {
@@ -100,6 +115,45 @@ export function BuyForm({
               className="border border-paper/20 bg-ink px-4 py-3 text-base normal-case tracking-normal text-paper outline-none focus:border-acid"
             />
           </label>
+          <label className="flex flex-col gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-mute">
+            Logo (optional)
+            <input
+              value={logoUrl}
+              onChange={(event) => {
+                setLogoUrl(event.target.value);
+                setLogoBroken(false);
+              }}
+              placeholder="https://yoursite.com/logo.png"
+              className="border border-paper/20 bg-ink px-4 py-3 text-base normal-case tracking-normal text-paper outline-none focus:border-acid"
+            />
+            <span className="normal-case tracking-normal text-mute">
+              Link a PNG or SVG. Leave it blank and we use your site&apos;s
+              favicon.
+            </span>
+          </label>
+
+          {logoPreview ? (
+            <div className="flex items-center gap-4 border border-paper/15 p-4">
+              {logoBroken ? (
+                <p className="font-mono text-xs text-hot">
+                  That image would not load. Check the link or leave it blank.
+                </p>
+              ) : (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={logoPreview}
+                    alt="Your logo as it will appear on the homepage"
+                    onError={() => setLogoBroken(true)}
+                    className="size-14 rounded-lg bg-paper/10 object-contain p-1"
+                  />
+                  <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-mute">
+                    Preview
+                  </p>
+                </>
+              )}
+            </div>
+          ) : null}
         </>
       ) : (
         <p className="border border-hot/40 bg-hot/10 p-4 text-sm text-paper/80">

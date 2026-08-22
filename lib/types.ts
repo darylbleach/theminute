@@ -20,6 +20,8 @@ export type PublicState = {
   killedReason: string | null;
   contactEmail: string;
   live: PublicReign | null;
+  /** The most recent paying advertiser, shown while the homepage sits empty. */
+  lastPaid: PublicReign | null;
   queue: PublicReign[];
   next: PublicReign | null;
   stats: {

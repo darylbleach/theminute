@@ -31,7 +31,15 @@ function Headline({ text, reservedPx }: { text: string; reservedPx: number }) {
   );
 }
 
-function ReignLogo({ src, hostname }: { src: string; hostname: string }) {
+function ReignLogo({
+  src,
+  hostname,
+  className = "size-11 shrink-0 rounded-lg bg-paper/10 object-contain p-1 sm:size-14 md:size-20",
+}: {
+  src: string;
+  hostname: string;
+  className?: string;
+}) {
   const fallback = faviconFor(hostname);
   const [current, setCurrent] = useState(src);
 
@@ -41,7 +49,7 @@ function ReignLogo({ src, hostname }: { src: string; hostname: string }) {
       src={current}
       alt=""
       onError={() => setCurrent((value) => (value === fallback ? value : fallback))}
-      className="size-11 shrink-0 rounded-lg bg-paper/10 object-contain p-1 sm:size-14 md:size-20"
+      className={className}
     />
   );
 }
@@ -83,6 +91,7 @@ export function Takeover({ initial }: { initial: PublicState | null }) {
 
   const live = state?.live ?? null;
   const next = state?.next ?? null;
+  const lastPaid = state?.lastPaid ?? null;
 
   return (
     <main className="relative flex min-h-dvh flex-col overflow-hidden bg-ink text-paper">
@@ -148,11 +157,43 @@ export function Takeover({ initial }: { initial: PublicState | null }) {
             <p>
               {live
                 ? `${live.clickCount} clicks · ${live.minutesPaid} min bought`
-                : "Waiting for the first paid takeover"}
+                : lastPaid
+                  ? "Nobody on the clock right now"
+                  : "Waiting for the first paid takeover"}
             </p>
             {next ? <p>Next up: {next.hostname}</p> : <p>Queue is empty</p>}
           </div>
         </div>
+
+        {!live && lastPaid ? (
+          <div className="mt-10 border-t border-paper/15 pt-5">
+            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-mute">
+              Last on the homepage
+            </p>
+            <a
+              href={`/go/${lastPaid.id}`}
+              rel="nofollow sponsored noopener"
+              className="mt-3 inline-flex max-w-full items-center gap-3 text-paper/80 hover:text-acid"
+            >
+              {lastPaid.logoUrl ? (
+                <ReignLogo
+                  key={lastPaid.logoUrl}
+                  src={lastPaid.logoUrl}
+                  hostname={lastPaid.hostname}
+                  className="size-9 shrink-0 rounded-md bg-paper/10 object-contain p-1"
+                />
+              ) : null}
+              <span className="min-w-0">
+                <span className="block truncate font-display text-2xl tracking-wide md:text-3xl">
+                  {lastPaid.hostname}
+                </span>
+                <span className="block truncate text-sm text-mute">
+                  {lastPaid.tagline}
+                </span>
+              </span>
+            </a>
+          </div>
+        ) : null}
       </section>
 
       <footer className="relative z-20 border-t border-paper/15 bg-ink/80 p-4 backdrop-blur md:p-5">

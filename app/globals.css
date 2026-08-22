@@ -39,8 +39,16 @@ body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
-a {
-  color: inherit;
+/**
+ * This reset has to sit in the base layer. Unlayered rules beat every cascade
+ * layer regardless of specificity, so outside a layer it silently overrode
+ * Tailwind's text-* utilities on every link on the site: the acid button drew
+ * paper-on-yellow, Defend lost its red, and nav hovers never changed colour.
+ */
+@layer base {
+  a {
+    color: inherit;
+  }
 }
 
 button,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import { track } from "@vercel/analytics";
 import { MIN_MINUTES } from "@/lib/config";
 import { formatUsd, minutesCostCents } from "@/lib/money";
 import type { PublicState } from "@/lib/types";
@@ -43,6 +44,7 @@ export function BuyForm({
       if (!response.ok || !payload.url) {
         throw new Error(payload.error ?? "Checkout failed.");
       }
+      track("checkout_started", { action });
       window.location.href = payload.url;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Checkout failed.");

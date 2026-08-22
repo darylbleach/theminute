@@ -8,7 +8,11 @@ import {
   quoteCut,
   withQueueLock,
 } from "@/lib/queue";
-import { getStripe, integrationIdentifier } from "@/lib/stripe";
+import {
+  getStripe,
+  integrationIdentifier,
+  WEBSITE_ADVERTISING_TAX_CODE,
+} from "@/lib/stripe";
 import { faviconFor, parsePlacementUrl, sanitizeTagline } from "@/lib/urls";
 
 export const runtime = "nodejs";
@@ -91,6 +95,10 @@ export async function POST(request: Request) {
       success_url: `${siteUrl()}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl()}/buy`,
       client_reference_id: email,
+      // This account has Managed Payments on by default. Homepage ads are not
+      // an eligible digital-goods category, so Checkout requires either an
+      // eligible tax code or this opt-out.
+      managed_payments: { enabled: false },
       metadata: {
         action,
         url: placement.href,
@@ -117,6 +125,7 @@ export async function POST(request: Request) {
                     ? `Cut the line — ${minutes} minute${minutes === 1 ? "" : "s"}`
                     : `The Minute — ${minutes} minute${minutes === 1 ? "" : "s"}`,
               description: `${placement.hostname} · ${tagline}`,
+              tax_code: WEBSITE_ADVERTISING_TAX_CODE,
             },
           },
         },

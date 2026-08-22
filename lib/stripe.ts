@@ -1,5 +1,9 @@
 import Stripe from "stripe";
 
+// Website Advertising — automated homepage placement, not a Managed Payments digital good.
+// https://docs.stripe.com/tax/tax-codes
+export const WEBSITE_ADVERTISING_TAX_CODE = "txcd_10701000";
+
 let stripe: Stripe | null = null;
 
 export function getStripe() {

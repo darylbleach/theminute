@@ -10,10 +10,7 @@ function authorized(request: Request) {
   return header === `Bearer ${secret}`;
 }
 
-export async function GET(request: Request) {
-  if (!authorized(request)) {
-    return Response.json({ error: "Unauthorized." }, { status: 401 });
-  }
+async function tick() {
   const result = await withQueueLock((tx) => advanceClock(tx));
   return Response.json({
     ok: true,
@@ -22,6 +19,14 @@ export async function GET(request: Request) {
   });
 }
 
-export async function POST(request: Request) {
-  return GET(request);
+export async function GET(request: Request) {
+  if (!authorized(request)) {
+    return Response.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  return tick();
+}
+
+/** Public: the live homepage calls this when the clock hits zero. */
+export async function POST() {
+  return tick();
 }

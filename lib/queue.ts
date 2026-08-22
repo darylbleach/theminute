@@ -111,8 +111,14 @@ async function promoteReign(tx: Tx, next: Reign, now: Date) {
 export async function advanceClock(tx: Tx, now = new Date()) {
   const site = await getSite(tx);
   const live = await getLiveReign(tx);
+  const queued = await getQueuedReigns(tx);
 
-  if (live?.endsAt && live.endsAt.getTime() <= now.getTime()) {
+  const expired = Boolean(live?.endsAt && live.endsAt.getTime() <= now.getTime());
+  // The seeded reign is a placeholder so the page is never empty at launch.
+  // Nobody paid for it, so it must not hold minutes a real buyer paid for.
+  const yieldsToPaid = Boolean(live?.isSeeded) && queued.length > 0 && !site?.killed;
+
+  if (live && (expired || yieldsToPaid)) {
     await archiveReign(tx, live, now, "archived");
   }
 
@@ -121,7 +127,7 @@ export async function advanceClock(tx: Tx, now = new Date()) {
     return { live: stillLive, promoted: null as Reign | null };
   }
 
-  const [next] = await getQueuedReigns(tx);
+  const [next] = queued;
   if (!next) {
     return { live: null, promoted: null };
   }

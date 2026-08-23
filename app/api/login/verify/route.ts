@@ -4,6 +4,7 @@ import {
   completePaidRoomLogin,
   destinationAfterLogin,
 } from "@/lib/login";
+import { clientIpFromHeaders } from "@/lib/login-lockout";
 import { HOST_COOKIE, hostCookieOptions } from "@/lib/rooms";
 
 export const runtime = "nodejs";
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
     const { hostToken, rooms } = await completePaidRoomLogin(
       input,
       currentHostToken,
+      clientIpFromHeaders(request.headers),
     );
     const destination = destinationAfterLogin(rooms);
     if (!destination || !hostToken) {
@@ -87,6 +89,9 @@ export async function POST(request: Request) {
         { error: "Database is not configured yet." },
         { status: 503 },
       );
+    }
+    if (message.includes("Too many")) {
+      return Response.json({ error: message }, { status: 429 });
     }
     const status =
       message.includes("not valid") ||

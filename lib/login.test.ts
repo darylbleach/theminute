@@ -63,3 +63,51 @@ test("magic link path and copy stay on the stand-up product", () => {
   assert.match(RESEND_MISSING_MESSAGE, /Resend/);
   assert.match(loginFromAddress(), /hello@theminute\.lol/);
 });
+
+import {
+  LOGIN_IP_MAX_FAILURES,
+  LOGIN_LOCKOUT_MS,
+  LOGIN_MAX_CODE_ATTEMPTS,
+  clientIpFromHeaders,
+  emailLockKey,
+  ipLockKey,
+  isLockActive,
+  lockoutUntil,
+  nextFailCount,
+  shouldKillChallenge,
+  shouldLockEmail,
+  shouldLockIp,
+} from "./login-lockout";
+
+test("kills the 6-digit challenge after five bad codes", () => {
+  assert.equal(LOGIN_MAX_CODE_ATTEMPTS, 5);
+  assert.equal(shouldKillChallenge(4), false);
+  assert.equal(shouldKillChallenge(5), true);
+  assert.equal(shouldLockEmail(5), true);
+  assert.equal(nextFailCount(4), 5);
+});
+
+test("locks an IP after ten failed verifies", () => {
+  assert.equal(LOGIN_IP_MAX_FAILURES, 10);
+  assert.equal(shouldLockIp(9), false);
+  assert.equal(shouldLockIp(10), true);
+  assert.equal(LOGIN_LOCKOUT_MS, 15 * 60 * 1000);
+  const now = Date.parse("2026-08-23T12:00:00.000Z");
+  assert.equal(lockoutUntil(now).getTime(), now + LOGIN_LOCKOUT_MS);
+  assert.equal(isLockActive(new Date(now + 1), now), true);
+  assert.equal(isLockActive(new Date(now - 1), now), false);
+});
+
+test("reads the first forwarded IP", () => {
+  assert.equal(
+    clientIpFromHeaders(new Headers({ "x-forwarded-for": "1.2.3.4, 5.6.7.8" })),
+    "1.2.3.4",
+  );
+  assert.equal(
+    clientIpFromHeaders(new Headers({ "x-real-ip": "9.9.9.9" })),
+    "9.9.9.9",
+  );
+  assert.equal(clientIpFromHeaders(new Headers()), "unknown");
+  assert.equal(emailLockKey(" Ada@Example.COM "), "email:ada@example.com");
+  assert.equal(ipLockKey("1.2.3.4"), "ip:1.2.3.4");
+});

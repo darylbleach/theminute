@@ -1,5 +1,6 @@
 import { LOGIN_SENT_MESSAGE } from "@/lib/login-copy";
 import { requestPaidRoomLogin } from "@/lib/login";
+import { clientIpFromHeaders } from "@/lib/login-lockout";
 
 export const runtime = "nodejs";
 
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
 
   const email = (json as { email?: unknown }).email;
   try {
-    await requestPaidRoomLogin(email);
+    await requestPaidRoomLogin(email, clientIpFromHeaders(request.headers));
     return Response.json(
       { ok: true, message: LOGIN_SENT_MESSAGE },
       { headers: { "Cache-Control": "no-store" } },
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
     if (message.includes("RESEND_API_KEY") || message.includes("Resend")) {
       return Response.json({ error: message }, { status: 503 });
     }
-    if (message.includes("Wait a few seconds")) {
+    if (message.includes("Wait a few seconds") || message.includes("Too many")) {
       return Response.json({ error: message }, { status: 429 });
     }
     return Response.json({ error: message }, { status: 400 });

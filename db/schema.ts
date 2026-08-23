@@ -138,6 +138,7 @@ export const loginTokens = pgTable(
     codeHash: text("code_hash").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    failedAttempts: integer("failed_attempts").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -153,3 +154,14 @@ export type Reign = typeof reigns.$inferSelect;
 export type NewReign = typeof reigns.$inferInsert;
 export type Room = typeof rooms.$inferSelect;
 export type LoginToken = typeof loginTokens.$inferSelect;
+
+export const loginLockouts = pgTable("login_lockouts", {
+  key: text("key").primaryKey(),
+  failCount: integer("fail_count").notNull().default(0),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export type LoginLockout = typeof loginLockouts.$inferSelect;

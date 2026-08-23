@@ -14,6 +14,16 @@ import {
   LOGIN_TTL_MS,
 } from "@/lib/login-copy";
 import {
+  LOGIN_LOCKED_MESSAGE,
+  assertNotLocked,
+  clearLoginLockouts,
+  emailLockKey,
+  ipLockKey,
+  nextFailCount,
+  recordFailedVerify,
+  shouldKillChallenge,
+} from "@/lib/login-lockout";
+import {
   findHostRoom,
   findPaidRoomsByEmail,
   hashToken,
@@ -115,9 +125,13 @@ function loginEmailCopy(token: string, code: string) {
   };
 }
 
-export async function createLoginChallenge(emailInput: unknown) {
+export async function createLoginChallenge(
+  emailInput: unknown,
+  clientIp = "unknown",
+) {
   const email = cleanLoginEmail(emailInput);
   const db = getDb();
+  await assertNotLocked([emailLockKey(email), ipLockKey(clientIp)], db);
   const latest = await db.query.loginTokens.findFirst({
     where: eq(loginTokens.email, email),
     orderBy: [desc(loginTokens.createdAt)],
@@ -138,13 +152,17 @@ export async function createLoginChallenge(emailInput: unknown) {
     tokenHash: hashToken(token),
     codeHash: hashToken(code),
     expiresAt: new Date(Date.now() + LOGIN_TTL_MS),
+    failedAttempts: 0,
   });
 
   return { email, token, code };
 }
 
-export async function requestPaidRoomLogin(emailInput: unknown) {
-  const challenge = await createLoginChallenge(emailInput);
+export async function requestPaidRoomLogin(
+  emailInput: unknown,
+  clientIp = "unknown",
+) {
+  const challenge = await createLoginChallenge(emailInput, clientIp);
   if (!resendApiKey()) {
     throw new Error(RESEND_MISSING_MESSAGE);
   }
@@ -189,7 +207,13 @@ async function consumeTokenRow(tx: LoginDb, token: string) {
   throw new Error("That link has expired. Request a new one.");
 }
 
-async function consumeCodeRow(tx: LoginDb, email: string, code: string) {
+async function consumeCodeRow(
+  tx: LoginDb,
+  email: string,
+  code: string,
+  clientIp: string,
+) {
+  await assertNotLocked([emailLockKey(email), ipLockKey(clientIp)], tx);
   const now = new Date();
   const candidates = await tx.query.loginTokens.findMany({
     where: and(
@@ -202,6 +226,24 @@ async function consumeCodeRow(tx: LoginDb, email: string, code: string) {
     hashesMatch(row.codeHash, hashToken(code)),
   );
   if (!match) {
+    const target = candidates[0];
+    if (target) {
+      const attempts = nextFailCount(target.failedAttempts);
+      const killed = shouldKillChallenge(attempts);
+      await tx
+        .update(loginTokens)
+        .set({
+          failedAttempts: attempts,
+          consumedAt: killed ? now : target.consumedAt,
+        })
+        .where(eq(loginTokens.id, target.id));
+      await recordFailedVerify({ email, ip: clientIp, attempts }, tx);
+      if (killed) {
+        throw new Error(LOGIN_LOCKED_MESSAGE);
+      }
+    } else {
+      await recordFailedVerify({ email, ip: clientIp, attempts: 1 }, tx);
+    }
     throw new Error("That code is not valid. Check it, or request a new one.");
   }
   const [consumed] = await tx
@@ -220,6 +262,7 @@ async function consumeCodeRow(tx: LoginDb, email: string, code: string) {
 export async function consumeLoginChallenge(
   input: { token: string } | { email: string; code: string },
   tx: LoginDb = getDb(),
+  clientIp = "unknown",
 ): Promise<LoginToken> {
   if ("token" in input) {
     return consumeTokenRow(tx, cleanLoginToken(input.token));
@@ -228,16 +271,19 @@ export async function consumeLoginChallenge(
     tx,
     cleanLoginEmail(input.email),
     cleanLoginCode(input.code),
+    clientIp,
   );
 }
 
 export async function completePaidRoomLogin(
   input: { token: string } | { email: string; code: string },
   currentHostToken?: string,
+  clientIp = "unknown",
 ) {
   const db = getDb();
   return db.transaction(async (tx) => {
-    const consumed = await consumeLoginChallenge(input, tx);
+    const consumed = await consumeLoginChallenge(input, tx, clientIp);
+    await clearLoginLockouts({ email: consumed.email, ip: clientIp }, tx);
     const paidRooms = await findPaidRoomsByEmail(consumed.email, tx);
     if (paidRooms.length === 0) {
       return { hostToken: null as string | null, rooms: paidRooms };

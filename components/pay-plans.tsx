@@ -60,8 +60,9 @@ export function PayPlans() {
     return (
       <div className="max-w-xl">
         <p className="text-xl text-paper/80">
-          Create a stand-up first — it’s free. Then unlock that room from the
-          same browser. Stripe takes your email at checkout. No account to make.
+          Create a stand-up first — it’s free. Unlock it from this browser.
+          Stripe takes your email at checkout; that email owns the room, so you
+          can open it from any computer.
         </p>
         <Link
           href="/"
@@ -78,14 +79,23 @@ export function PayPlans() {
       <div className="max-w-xl">
         <p className="text-xl text-paper/80">
           {room.name} is unlocked. Roster stays saved, and you can pick slot
-          length from the host controls.
+          length from the host controls. On another computer, open it with the
+          Stripe email — no password.
         </p>
-        <Link
-          href={`/r/${room.code}`}
-          className="mt-8 inline-block bg-acid px-5 py-3 font-display text-2xl tracking-wide text-ink"
-        >
-          Open room
-        </Link>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link
+            href={`/r/${room.code}`}
+            className="inline-block bg-acid px-5 py-3 font-display text-2xl tracking-wide text-ink"
+          >
+            Open room
+          </Link>
+          <Link
+            href="/login"
+            className="inline-block border border-paper/30 px-5 py-3 font-display text-2xl tracking-wide hover:border-acid hover:text-acid"
+          >
+            Open my rooms
+          </Link>
+        </div>
       </div>
     );
   }
@@ -94,7 +104,7 @@ export function PayPlans() {
     <div>
       <p className="max-w-2xl text-xl text-paper/80">
         Unlock {room.name} for this team. Saved roster in Neon, slot lengths
-        you pick, still no account. Stripe collects email at checkout.
+        you pick. Stripe collects email at checkout — that email owns the room.
       </p>
       <div className="mt-10 grid gap-4 md:grid-cols-2">
         <button
@@ -139,7 +149,10 @@ export function PayPlans() {
         </p>
       ) : null}
       <p className="mt-8 font-mono text-[10px] uppercase tracking-[0.16em] text-mute">
-        Host only · room {room.code}
+        Host only · room {room.code} ·{" "}
+        <Link href="/login" className="underline underline-offset-4 hover:text-acid">
+          Open my rooms
+        </Link>
       </p>
     </div>
   );

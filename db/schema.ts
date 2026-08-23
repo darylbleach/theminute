@@ -125,9 +125,43 @@ export const rooms = pgTable(
     uniqueIndex("rooms_host_token_hash_uidx").on(table.hostTokenHash),
     index("rooms_updated_at_idx").on(table.updatedAt),
     index("rooms_stripe_subscription_id_idx").on(table.stripeSubscriptionId),
+    index("rooms_paid_email_idx").on(table.paidEmail),
+  ],
+);
+
+export const loginTokens = pgTable(
+  "login_tokens",
+  {
+    id: text("id").primaryKey(),
+    email: text("email").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    codeHash: text("code_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    failedAttempts: integer("failed_attempts").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("login_tokens_token_hash_uidx").on(table.tokenHash),
+    index("login_tokens_email_idx").on(table.email),
+    index("login_tokens_expires_at_idx").on(table.expiresAt),
   ],
 );
 
 export type Reign = typeof reigns.$inferSelect;
 export type NewReign = typeof reigns.$inferInsert;
 export type Room = typeof rooms.$inferSelect;
+export type LoginToken = typeof loginTokens.$inferSelect;
+
+export const loginLockouts = pgTable("login_lockouts", {
+  key: text("key").primaryKey(),
+  failCount: integer("fail_count").notNull().default(0),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export type LoginLockout = typeof loginLockouts.$inferSelect;

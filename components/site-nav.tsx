@@ -3,6 +3,7 @@ import { SITE_NAME } from "@/lib/config";
 
 const links = [
   { href: "/", label: "New room" },
+  { href: "/login", label: "Open my rooms" },
   { href: "/terms", label: "Terms" },
 ];
 

@@ -33,11 +33,18 @@ export default async function HomePage() {
         <footer className="mt-16 flex flex-col gap-3 border-t border-paper/15 pt-5 font-mono text-[10px] uppercase tracking-[0.14em] text-mute sm:flex-row sm:items-center sm:justify-between">
           <span>Free for one room · no account required</span>
           {hostRoom?.paid ? (
-            <span>Unlocked · saved roster + slot lengths</span>
-          ) : (
-            <Link href="/pay" className="hover:text-acid">
-              Unlock saved teams · £19 once or £3/mo
+            <Link href="/login" className="hover:text-acid">
+              Open from any computer with the Stripe email
             </Link>
+          ) : (
+            <span className="flex flex-wrap gap-x-4 gap-y-1">
+              <Link href="/pay" className="hover:text-acid">
+                Unlock saved teams · £19 once or £3/mo
+              </Link>
+              <Link href="/login" className="hover:text-acid">
+                Open my rooms
+              </Link>
+            </span>
           )}
         </footer>
       </section>

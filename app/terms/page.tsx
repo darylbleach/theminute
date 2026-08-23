@@ -29,8 +29,11 @@ export default function TermsPage() {
         </p>
         <p>
           Payments are processed by Stripe. Stripe collects your email at
-          checkout. We store the room, the roster, and whether it is unlocked.
-          We do not create user accounts.
+          checkout; that email owns an unlocked room. You can open it from any
+          computer with a one-time link or six-digit code. No password. Joiners
+          use the share link with no login. Free rooms stay on the creating
+          browser. We store the room, the roster, and whether it is unlocked. We
+          do not create user accounts.
         </p>
         <p>
           <strong className="text-paper">No refunds</strong> on the one-time £19

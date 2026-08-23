@@ -7,6 +7,7 @@ import {
   findHostRoom,
   hashToken,
   HOST_COOKIE,
+  hostCookieOptions,
   makeHostToken,
   makeRoomCode,
   maxPeopleFor,
@@ -46,13 +47,7 @@ export async function POST(request: Request) {
 
     if (!hostToken) {
       hostToken = makeHostToken();
-      cookieStore.set(HOST_COOKIE, hostToken, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 365,
-      });
+      cookieStore.set(HOST_COOKIE, hostToken, hostCookieOptions());
     }
 
     const db = getDb();

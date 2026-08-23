@@ -5,6 +5,7 @@ import {
   markRoomPaidFromCheckout,
   markRoomPaidFromInvoice,
   markRoomUnpaidFromSubscription,
+  shouldMarkRoomPaidFromCheckout,
 } from "@/lib/room-billing";
 import { fulfillCheckout, withQueueLock } from "@/lib/queue";
 import { getStripe } from "@/lib/stripe";
@@ -90,7 +91,11 @@ export async function POST(request: Request) {
       ) {
         const session = event.data.object as Stripe.Checkout.Session;
         if (isPaidRoomMetadata(session.metadata)) {
-          await markRoomPaidFromCheckout(tx, session);
+          if (
+            shouldMarkRoomPaidFromCheckout(event.type, session.payment_status)
+          ) {
+            await markRoomPaidFromCheckout(tx, session);
+          }
           return;
         }
         await fulfillCheckout(tx, auctionFulfillment(session));

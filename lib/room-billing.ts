@@ -3,6 +3,13 @@ import type Stripe from "stripe";
 import { rooms, type DbTransaction } from "@/db";
 import { ROOM_MONTHLY_CENTS, ROOM_ONCE_CENTS } from "@/lib/config";
 import { applyFreeLimits } from "@/lib/rooms";
+import { getStripe } from "@/lib/stripe";
+
+const LIVE_ROOM_SUBSCRIPTION_STATUSES = new Set([
+  "active",
+  "trialing",
+  "past_due",
+]);
 
 export const ROOM_CHECKOUT_KIND = "standup_room";
 export const ROOM_CHECKOUT_PRODUCT = "room";
@@ -58,6 +65,49 @@ export function subscriptionIdFromInvoice(invoice: Stripe.Invoice) {
   return stripeId(invoice.parent?.subscription_details?.subscription);
 }
 
+export function isLiveRoomSubscriptionStatus(
+  status: string | null | undefined,
+) {
+  return Boolean(status && LIVE_ROOM_SUBSCRIPTION_STATUSES.has(status));
+}
+
+export function shouldMarkRoomPaidFromCheckout(
+  eventType: string,
+  paymentStatus: string | null | undefined,
+) {
+  if (eventType === "checkout.session.async_payment_succeeded") return true;
+  return eventType === "checkout.session.completed" && paymentStatus === "paid";
+}
+
+export function subscriptionStatusFromInvoice(invoice: Stripe.Invoice) {
+  const subscription = invoice.parent?.subscription_details?.subscription;
+  if (!subscription || typeof subscription === "string") return null;
+  return subscription.status ?? null;
+}
+
+export function shouldMarkRoomPaidFromInvoice(input: {
+  storedSubscriptionId: string | null | undefined;
+  invoiceSubscriptionId: string | null | undefined;
+  subscriptionStatus: string | null | undefined;
+}) {
+  const stored = input.storedSubscriptionId ?? null;
+  const invoiceSubscriptionId = input.invoiceSubscriptionId ?? null;
+  if (stored && invoiceSubscriptionId && stored === invoiceSubscriptionId) {
+    return true;
+  }
+  return isLiveRoomSubscriptionStatus(input.subscriptionStatus);
+}
+
+export function needsSubscriptionStatusForInvoicePaid(input: {
+  storedSubscriptionId: string | null | undefined;
+  invoiceSubscriptionId: string | null | undefined;
+  subscriptionStatus: string | null | undefined;
+}) {
+  if (shouldMarkRoomPaidFromInvoice(input)) return false;
+  if (input.subscriptionStatus) return false;
+  return Boolean(input.invoiceSubscriptionId);
+}
+
 function checkoutEmail(session: Stripe.Checkout.Session) {
   const email =
     session.metadata?.email ||
@@ -70,6 +120,8 @@ export async function markRoomPaidFromCheckout(
   tx: DbTransaction,
   session: Stripe.Checkout.Session,
 ) {
+  if (session.payment_status !== "paid") return;
+
   const metadata = session.metadata ?? {};
   const roomCode = metadata.roomCode;
   if (!roomCode) {
@@ -111,6 +163,28 @@ export async function markRoomPaidFromInvoice(
       : null);
 
   if (!room) return;
+
+  let subscriptionStatus = subscriptionStatusFromInvoice(invoice);
+  const invoiceGuard = {
+    storedSubscriptionId: room.stripeSubscriptionId,
+    invoiceSubscriptionId: subscriptionId,
+    subscriptionStatus,
+  };
+  if (needsSubscriptionStatusForInvoicePaid(invoiceGuard) && subscriptionId) {
+    const subscription = await getStripe().subscriptions.retrieve(
+      subscriptionId,
+    );
+    subscriptionStatus = subscription.status;
+  }
+  if (
+    !shouldMarkRoomPaidFromInvoice({
+      storedSubscriptionId: room.stripeSubscriptionId,
+      invoiceSubscriptionId: subscriptionId,
+      subscriptionStatus,
+    })
+  ) {
+    return;
+  }
 
   const email = invoice.customer_email?.trim().toLowerCase() || room.paidEmail;
 

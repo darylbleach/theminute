@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { SITE_NAME } from "@/lib/config";
 
-const links = [{ href: "/", label: "New room" }];
+const links = [
+  { href: "/", label: "New room" },
+  { href: "/terms", label: "Terms" },
+];
 
 export function SiteNav({ live }: { live?: boolean }) {
   return (

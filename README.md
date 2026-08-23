@@ -20,8 +20,9 @@ Live at [theminute.lol](https://theminute.lol).
 ## Stack
 
 Next.js on Vercel, Neon Postgres with Drizzle, Stripe Checkout, and polling
-once per second. The previous Stripe auction routes remain in the repository
-but are not linked from the homepage.
+once per second. Old auction URLs (`/buy`, `/queue`, `/archive`, `/longest`,
+`/reign`, `/success`, `/go`) 301 to `/`. The Stripe webhook and auction
+checkout API remain for in-flight payments.
 
 ## Setup
 

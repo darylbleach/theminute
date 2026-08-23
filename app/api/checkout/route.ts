@@ -99,8 +99,8 @@ export async function POST(request: Request) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer_email: email,
-      success_url: `${siteUrl()}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl()}/buy`,
+      success_url: `${siteUrl()}/`,
+      cancel_url: `${siteUrl()}/`,
       client_reference_id: email,
       // This account has Managed Payments on by default. Homepage ads are not
       // an eligible digital-goods category, so Checkout requires either an

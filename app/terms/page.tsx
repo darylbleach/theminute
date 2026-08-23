@@ -1,40 +1,45 @@
+import type { Metadata } from "next";
 import { contactEmail } from "@/lib/config";
 import { PageShell } from "@/components/page-shell";
 
+export const metadata: Metadata = {
+  title: "Terms",
+  description:
+    "Terms for The Minute, a UK stand-up timer. Free for 60 seconds and six people, or unlock a room for £19 once or £3/month.",
+};
+
 export default function TermsPage() {
   return (
-    <PageShell kicker="Legal" title="Paid placement. Not a contest.">
+    <PageShell kicker="Legal" title="A stand-up timer.">
       <div className="flex max-w-3xl flex-col gap-6 text-paper/80">
         <p>
-          The Minute sells advertising time on a public webpage. You are buying
-          a placement: your URL, logo, and one line of copy on the homepage for
-          a number of minutes. This is not a contest, lottery, sweepstakes, or
-          prize draw. There is no chance element and nothing of value is awarded
-          to a winner.
+          The Minute is a shared stand-up timer. You create a room, share the
+          link, and each person gets a timed slot before the clock moves on. It
+          is not an auction, contest, lottery, or advertising placement.
         </p>
         <p>
-          <strong className="text-paper">No refunds.</strong> Minutes already
-          paid for cannot be taken by another buyer. If you are still in the
-          queue, another buyer can pay to go in front of you. That payment does
-          not delete your minutes.
+          <strong className="text-paper">Free rooms</strong> are 60-second slots
+          and up to six people. No account is required.
         </p>
         <p>
-          Cutting the line costs 2× the remaining minutes of everyone skipped.
-          80% of that premium is issued as <strong className="text-paper">site credit</strong>{" "}
-          to the skipped buyers. Credits are not cash, are not transferable
-          off-site, and can only be applied to future Minute purchases. 20% is
-          retained by the house.
+          <strong className="text-paper">Unlock a room</strong> for £19 once, or
+          £3/month. Paid hosts keep a saved roster and can pick slot length.
+          Cancel a monthly plan at any time; the room then returns to the free
+          limits. Prices are in pounds sterling.
         </p>
         <p>
-          All paid outbound links are marked <code>nofollow sponsored</code>. We
-          may refuse, delay, or take down a placement that is illegal, deceptive,
-          malware, adult, hateful, or otherwise unfit for a full-page takeover.
-          Report a URL: {contactEmail()}.
+          Payments are processed by Stripe. Stripe collects your email at
+          checkout. We store the room, the roster, and whether it is unlocked.
+          We do not create user accounts.
         </p>
         <p>
-          Payments are processed by Stripe. We store the email Stripe collects,
-          the placement you bought, click counts, and the credit ledger. We do
-          not create user accounts in v1.
+          <strong className="text-paper">No refunds</strong> on the one-time £19
+          unlock once the room is paid. Monthly billing can be cancelled; we do
+          not refund a month already started.
+        </p>
+        <p>
+          These terms are governed by the laws of England and Wales. Questions:{" "}
+          {contactEmail()}.
         </p>
       </div>
     </PageShell>

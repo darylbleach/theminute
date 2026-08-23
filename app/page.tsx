@@ -1,7 +1,21 @@
+import { cookies } from "next/headers";
+import Link from "next/link";
 import { CreateRoom } from "@/components/create-room";
 import { SiteNav } from "@/components/site-nav";
+import { findHostRoom, HOST_COOKIE, publicRoom } from "@/lib/rooms";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const token = (await cookies()).get(HOST_COOKIE)?.value;
+  let hostRoom = null;
+  if (token && process.env.DATABASE_URL) {
+    try {
+      const room = await findHostRoom(token);
+      if (room) hostRoom = publicRoom(room, token);
+    } catch {
+      hostRoom = null;
+    }
+  }
+
   return (
     <main className="relative min-h-dvh overflow-hidden bg-ink text-paper">
       <div
@@ -15,15 +29,16 @@ export default function HomePage() {
       />
       <SiteNav />
       <section className="relative mx-auto w-full max-w-7xl px-5 pb-20 pt-28 md:px-10 md:pt-36">
-        <CreateRoom />
+        <CreateRoom hostRoom={hostRoom} />
         <footer className="mt-16 flex flex-col gap-3 border-t border-paper/15 pt-5 font-mono text-[10px] uppercase tracking-[0.14em] text-mute sm:flex-row sm:items-center sm:justify-between">
           <span>Free for one room · no account required</span>
-          <a
-            href="mailto:hello@theminute.lol?subject=The%20Minute%20for%20teams"
-            className="hover:text-acid"
-          >
-            Saved teams + Slack coming soon · £19 once or £3/mo
-          </a>
+          {hostRoom?.paid ? (
+            <span>Unlocked · saved roster + slot lengths</span>
+          ) : (
+            <Link href="/pay" className="hover:text-acid">
+              Unlock saved teams · £19 once or £3/mo
+            </Link>
+          )}
         </footer>
       </section>
     </main>

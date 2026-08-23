@@ -25,23 +25,23 @@ const mono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
   title: {
-    default: `${SITE_NAME} — a one-minute standup timer`,
+    default: `${SITE_NAME} — a one-minute stand-up timer`,
     template: `%s · ${SITE_NAME}`,
   },
   description:
-    "Keep standups moving with a shared 60-second timer, running order, and automatic speaker changes.",
+    "Keep stand-ups moving with a shared 60-second timer, running order, and automatic speaker changes.",
   applicationName: SITE_NAME,
   openGraph: {
-    title: `${SITE_NAME} — standups that stay standing`,
-    description: "A shared 60-second timer for fast team standups.",
+    title: `${SITE_NAME} — stand-ups that stay standing`,
+    description: "A shared 60-second timer for fast team stand-ups.",
     url: siteUrl(),
     siteName: SITE_NAME,
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME} — standups that stay standing`,
-    description: "A shared 60-second timer for fast team standups.",
+    title: `${SITE_NAME} — stand-ups that stay standing`,
+    description: "A shared 60-second timer for fast team stand-ups.",
   },
 };
 

@@ -2,21 +2,34 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { PublicRoom } from "@/lib/rooms";
 
 const ROSTER_KEY = "theminute:last-roster";
 const ROOM_KEY = "theminute:room-code";
 const EMPTY_ROSTER = ["", ""];
 
-export function CreateRoom() {
+export function CreateRoom({
+  hostRoom = null,
+}: {
+  hostRoom?: PublicRoom | null;
+}) {
   const router = useRouter();
-  const [roomName, setRoomName] = useState("Team standup");
-  const [roster, setRoster] = useState(EMPTY_ROSTER);
-  const [lastCode, setLastCode] = useState<string | null>(null);
+  const [roomName, setRoomName] = useState(hostRoom?.name ?? "Team stand-up");
+  const [roster, setRoster] = useState(
+    hostRoom?.roster.length ? hostRoom.roster : EMPTY_ROSTER,
+  );
+  const [lastCode, setLastCode] = useState<string | null>(hostRoom?.code ?? null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const paid = Boolean(hostRoom?.paid);
+  const maxPeople = hostRoom?.maxPeople ?? 6;
 
   useEffect(() => {
     const restore = window.setTimeout(() => {
+      if (hostRoom) {
+        localStorage.setItem(ROOM_KEY, hostRoom.code);
+        return;
+      }
       try {
         const saved = JSON.parse(localStorage.getItem(ROSTER_KEY) ?? "null") as {
           roomName?: unknown;
@@ -36,7 +49,7 @@ export function CreateRoom() {
       }
     }, 0);
     return () => window.clearTimeout(restore);
-  }, []);
+  }, [hostRoom]);
 
   function updateName(index: number, value: string) {
     setRoster((current) =>
@@ -88,15 +101,15 @@ export function CreateRoom() {
           One minute. Then move on.
         </p>
         <h1 className="mt-4 max-w-3xl font-display text-[clamp(4.5rem,13vw,10rem)] leading-[0.78] tracking-wide">
-          Standups that stay standing.
+          Stand-ups that stay standing.
         </h1>
         <p className="mt-7 max-w-xl text-lg leading-relaxed text-paper/70 md:text-2xl">
           Create a room, share the link, and give everyone 60 seconds. No
           account. No install. No wandering monologues.
         </p>
         <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-[0.16em] text-mute">
-          <span>Free room</span>
-          <span>Up to 6 people</span>
+          <span>{paid ? "Unlocked room" : "Free room"}</span>
+          <span>Up to {maxPeople} people</span>
           <span>Works on any screen</span>
         </div>
       </div>
@@ -187,7 +200,7 @@ export function CreateRoom() {
           ))}
         </div>
 
-        {roster.length < 6 ? (
+        {roster.length < maxPeople ? (
           <button
             type="button"
             onClick={() => setRoster((current) => [...current, ""])}
@@ -197,7 +210,7 @@ export function CreateRoom() {
           </button>
         ) : (
           <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.18em] text-mute">
-            Free limit: 6 people
+            {paid ? `Limit: ${maxPeople} people` : "Free limit: 6 people"}
           </p>
         )}
 
@@ -215,7 +228,9 @@ export function CreateRoom() {
           {submitting ? "Opening…" : lastCode ? "Restart room" : "Create room"}
         </button>
         <p className="mt-3 text-center font-mono text-[10px] leading-relaxed tracking-[0.08em] text-mute">
-          Your roster is remembered on this browser.
+          {paid
+            ? "Your roster is saved on this room."
+            : "Your roster is remembered on this browser."}
         </p>
       </form>
     </div>

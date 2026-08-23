@@ -3,8 +3,13 @@ import { and, eq, sql } from "drizzle-orm";
 import { getDb, rooms, type Room } from "@/db";
 
 export const HOST_COOKIE = "theminute_host";
-export const PERSON_SECONDS = 60;
-export const MAX_PEOPLE = 6;
+export const FREE_SLOT_SECONDS = 60;
+export const PERSON_SECONDS = FREE_SLOT_SECONDS;
+export const FREE_MAX_PEOPLE = 6;
+export const MAX_PEOPLE = FREE_MAX_PEOPLE;
+export const PAID_MAX_PEOPLE = 50;
+export const SLOT_PRESETS = [30, 60, 120, 300] as const;
+export const MAX_CUSTOM_MINUTES = 60;
 
 export type PublicRoom = {
   code: string;
@@ -14,6 +19,9 @@ export type PublicRoom = {
   endsAt: string;
   serverNow: string;
   isHost: boolean;
+  paid: boolean;
+  slotSeconds: number;
+  maxPeople: number;
 };
 
 export function cleanRoomName(value: unknown) {
@@ -32,14 +40,67 @@ export function cleanPersonName(value: unknown) {
   return name;
 }
 
-export function cleanRoster(value: unknown) {
+export function maxPeopleFor(room: Pick<Room, "paid">) {
+  return room.paid ? PAID_MAX_PEOPLE : FREE_MAX_PEOPLE;
+}
+
+export function slotSecondsFor(room: Pick<Room, "paid" | "slotSeconds">) {
+  if (!room.paid) return FREE_SLOT_SECONDS;
+  return room.slotSeconds > 0 ? room.slotSeconds : FREE_SLOT_SECONDS;
+}
+
+export function cleanRoster(value: unknown, maxPeople = FREE_MAX_PEOPLE) {
   if (!Array.isArray(value)) throw new Error("Add at least one person.");
   const roster = value.map(cleanPersonName);
   if (roster.length < 1) throw new Error("Add at least one person.");
-  if (roster.length > MAX_PEOPLE) {
-    throw new Error(`Free rooms are limited to ${MAX_PEOPLE} people.`);
+  if (roster.length > maxPeople) {
+    throw new Error(
+      maxPeople <= FREE_MAX_PEOPLE
+        ? `Free rooms are limited to ${FREE_MAX_PEOPLE} people.`
+        : `Keep the roster under ${maxPeople} people.`,
+    );
   }
   return roster;
+}
+
+export function cleanSlotSeconds(value: unknown) {
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < 30) {
+    throw new Error("Pick a slot length.");
+  }
+  if ((SLOT_PRESETS as readonly number[]).includes(n)) return n;
+  if (n % 60 !== 0) {
+    throw new Error("Custom slots are a whole number of minutes.");
+  }
+  const minutes = n / 60;
+  if (minutes < 1 || minutes > MAX_CUSTOM_MINUTES) {
+    throw new Error(`Custom slots can be 1–${MAX_CUSTOM_MINUTES} minutes.`);
+  }
+  return n;
+}
+
+export function slotLabel(slotSeconds: number) {
+  if (slotSeconds < 60) return `${slotSeconds}s`;
+  const minutes = slotSeconds / 60;
+  if (Number.isInteger(minutes)) {
+    return minutes === 1 ? "1 min" : `${minutes} min`;
+  }
+  return `${slotSeconds}s`;
+}
+
+export function applyFreeLimits(room: Room) {
+  const roster = room.roster.slice(0, FREE_MAX_PEOPLE);
+  const currentIndex =
+    roster.length === 0 ? 0 : Math.min(room.currentIndex, roster.length - 1);
+  return {
+    paid: false,
+    slotSeconds: FREE_SLOT_SECONDS,
+    stripeSubscriptionId: null,
+    roster,
+    currentIndex,
+    endsAt: new Date(Date.now() + FREE_SLOT_SECONDS * 1000),
+    updatedAt: new Date(),
+  };
 }
 
 export function hashToken(token: string) {
@@ -61,10 +122,11 @@ export async function loadCurrentRoom(code: string) {
 
   const now = Date.now();
   const end = room.endsAt.getTime();
+  const slot = slotSecondsFor(room);
   if (room.roster.length > 0 && end <= now) {
-    const steps = Math.floor((now - end) / (PERSON_SECONDS * 1000)) + 1;
+    const steps = Math.floor((now - end) / (slot * 1000)) + 1;
     const nextIndex = (room.currentIndex + steps) % room.roster.length;
-    const nextEndsAt = new Date(end + steps * PERSON_SECONDS * 1000);
+    const nextEndsAt = new Date(end + steps * slot * 1000);
     const [advanced] = await db
       .update(rooms)
       .set({
@@ -100,11 +162,26 @@ export function publicRoom(room: Room, hostToken?: string): PublicRoom {
     isHost: Boolean(
       hostToken && hashToken(hostToken) === room.hostTokenHash,
     ),
+    paid: Boolean(room.paid),
+    slotSeconds: slotSecondsFor(room),
+    maxPeople: maxPeopleFor(room),
   };
+}
+
+export async function findHostRoom(hostToken: string) {
+  const db = getDb();
+  return (
+    (await db.query.rooms.findFirst({
+      where: eq(rooms.hostTokenHash, hashToken(hostToken)),
+    })) ?? null
+  );
 }
 
 export async function joinRoom(code: string, name: string) {
   const db = getDb();
+  const room = await db.query.rooms.findFirst({ where: eq(rooms.code, code) });
+  if (!room) return null;
+  const max = maxPeopleFor(room);
   const [updated] = await db
     .update(rooms)
     .set({
@@ -114,7 +191,7 @@ export async function joinRoom(code: string, name: string) {
     .where(
       and(
         eq(rooms.code, code),
-        sql`jsonb_array_length(${rooms.roster}) < ${MAX_PEOPLE}`,
+        sql`jsonb_array_length(${rooms.roster}) < ${max}`,
       ),
     )
     .returning();

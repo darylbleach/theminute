@@ -18,6 +18,13 @@ export function formatClock(totalSeconds: number) {
   return `${pad2(minutes)}:${pad2(seconds)}`;
 }
 
+export function formatSlotRemaining(remaining: number, slotSeconds: number) {
+  const safe = Math.max(0, Math.floor(remaining));
+  if (slotSeconds <= 60) return String(safe);
+  const minutes = Math.floor(safe / 60);
+  return `${minutes}:${pad2(safe % 60)}`;
+}
+
 export function formatDuration(totalSeconds: number) {
   const { hours, minutes, seconds } = remainingParts(totalSeconds);
   if (hours > 0) {

@@ -3,12 +3,14 @@ import { cookies } from "next/headers";
 import { getDb, rooms } from "@/db";
 import {
   cleanPersonName,
+  cleanSlotSeconds,
   hashToken,
   HOST_COOKIE,
   joinRoom,
   loadCurrentRoom,
-  PERSON_SECONDS,
+  maxPeopleFor,
   publicRoom,
+  slotSecondsFor,
 } from "@/lib/rooms";
 
 async function roomCode(context: RouteContext<"/api/rooms/[code]">) {
@@ -44,10 +46,13 @@ export async function POST(
     if (!updated) {
       const exists = await getDb().query.rooms.findFirst({
         where: eq(rooms.code, code),
-        columns: { code: true },
       });
       return Response.json(
-        { error: exists ? "This room already has 6 people." : "Room not found." },
+        {
+          error: exists
+            ? `This room already has ${maxPeopleFor(exists)} people.`
+            : "Room not found.",
+        },
         { status: exists ? 409 : 404 },
       );
     }
@@ -74,11 +79,47 @@ export async function PATCH(
     return Response.json({ error: "Host controls only." }, { status: 403 });
   }
 
-  const body = (await request.json()) as { action?: unknown };
-  if (body.action !== "skip" && body.action !== "restart") {
+  const body = (await request.json()) as {
+    action?: unknown;
+    slotSeconds?: unknown;
+  };
+  if (
+    body.action !== "skip" &&
+    body.action !== "restart" &&
+    body.action !== "slot"
+  ) {
     return Response.json({ error: "Unknown control." }, { status: 400 });
   }
 
+  if (body.action === "slot") {
+    if (!room.paid) {
+      return Response.json(
+        { error: "Unlock this room to change slot length." },
+        { status: 403 },
+      );
+    }
+    let slotSeconds: number;
+    try {
+      slotSeconds = cleanSlotSeconds(body.slotSeconds);
+    } catch (error) {
+      return Response.json(
+        { error: error instanceof Error ? error.message : "Invalid slot." },
+        { status: 400 },
+      );
+    }
+    const [updated] = await getDb()
+      .update(rooms)
+      .set({
+        slotSeconds,
+        endsAt: new Date(Date.now() + slotSeconds * 1000),
+        updatedAt: new Date(),
+      })
+      .where(eq(rooms.code, code))
+      .returning();
+    return Response.json(publicRoom(updated, token));
+  }
+
+  const slot = slotSecondsFor(room);
   const currentIndex =
     body.action === "skip"
       ? (room.currentIndex + 1) % room.roster.length
@@ -87,7 +128,7 @@ export async function PATCH(
     .update(rooms)
     .set({
       currentIndex,
-      endsAt: new Date(Date.now() + PERSON_SECONDS * 1000),
+      endsAt: new Date(Date.now() + slot * 1000),
       updatedAt: new Date(),
     })
     .where(eq(rooms.code, code))

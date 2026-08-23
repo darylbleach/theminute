@@ -2,10 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   applyFreeLimits,
+  canClaimPaidRoom,
   cleanRoomName,
   cleanRoster,
   cleanSlotSeconds,
   hashToken,
+  HOST_COOKIE,
+  hostCookieOptions,
   makeRoomCode,
   maxPeopleFor,
   slotLabel,
@@ -49,6 +52,44 @@ test("creates short share codes and stable token hashes", () => {
   assert.match(makeRoomCode(), /^[a-f0-9]{6}$/);
   assert.equal(hashToken("host"), hashToken("host"));
   assert.notEqual(hashToken("host"), hashToken("joiner"));
+});
+
+test("host cookie options keep the existing host cookie contract", () => {
+  assert.equal(HOST_COOKIE, "theminute_host");
+  const options = hostCookieOptions();
+  assert.equal(options.httpOnly, true);
+  assert.equal(options.sameSite, "lax");
+  assert.equal(options.path, "/");
+  assert.equal(options.maxAge, 60 * 60 * 24 * 365);
+});
+
+test("only the Stripe email's paid rooms can be claimed as host", () => {
+  const paid = {
+    code: "aa11bb",
+    paid: true,
+    paidEmail: "host@example.com",
+  };
+  const otherPaid = {
+    code: "cc22dd",
+    paid: true,
+    paidEmail: "host@example.com",
+  };
+  const foreign = {
+    code: "ee33ff",
+    paid: true,
+    paidEmail: "other@example.com",
+  };
+  const free = {
+    code: "free01",
+    paid: false,
+    paidEmail: null,
+  };
+  assert.equal(canClaimPaidRoom(paid, otherPaid), true);
+  assert.equal(canClaimPaidRoom(paid, paid), true);
+  assert.equal(canClaimPaidRoom(paid, foreign), false);
+  assert.equal(canClaimPaidRoom(paid, free), false);
+  assert.equal(canClaimPaidRoom(free, paid), false);
+  assert.equal(canClaimPaidRoom(null, paid), false);
 });
 
 test("free rooms stay on 60-second slots", () => {

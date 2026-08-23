@@ -229,9 +229,17 @@ export function CreateRoom({
         </button>
         <p className="mt-3 text-center font-mono text-[10px] leading-relaxed tracking-[0.08em] text-mute">
           {paid
-            ? "Your roster is saved on this room."
+            ? "Your roster is saved on this room. Open it from any computer with the Stripe email."
             : "Your roster is remembered on this browser."}
         </p>
+        {!paid ? (
+          <p className="mt-2 text-center font-mono text-[10px] uppercase tracking-[0.08em] text-mute">
+            Already unlocked?{" "}
+            <a href="/login" className="underline underline-offset-4 hover:text-acid">
+              Open my rooms
+            </a>
+          </p>
+        ) : null}
       </form>
     </div>
   );

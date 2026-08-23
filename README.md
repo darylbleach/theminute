@@ -16,6 +16,9 @@ Live at [theminute.lol](https://theminute.lol).
 6. Unlock a room for £19 once or £3/month (Stripe Checkout). Paid hosts get a
    saved Neon roster and slot lengths of 30s / 1 / 2 / 5 minutes or a custom
    number of minutes. Free rooms stay locked at 60 seconds and six people.
+7. After checkout, the Stripe email owns the room. Open it from any computer at
+   `/login` with a magic link or six-digit code (no password). Joiners still
+   use `/r/[code]` with no login. Free rooms stay cookie-only.
 
 ## Stack
 
@@ -28,7 +31,8 @@ checkout API remain for in-flight payments.
 
 ```bash
 cp .env.example .env.local
-# fill DATABASE_URL and Stripe keys (test keys are fine locally)
+# fill DATABASE_URL, Stripe keys (test keys are fine locally),
+# and RESEND_API_KEY so /login can email magic links
 npm install
 npm run db:push
 npm run dev

@@ -5,7 +5,7 @@ import { PayPlans } from "@/components/pay-plans";
 export const metadata: Metadata = {
   title: "Unlock this room",
   description:
-    "Unlock a stand-up room for £19 once or £3/month. Saved roster and slot lengths. No account.",
+    "Unlock a stand-up room for £19 once or £3/month. Saved roster and slot lengths. Stripe email owns the room.",
   robots: { index: false, follow: false },
 };
 

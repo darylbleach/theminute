@@ -1,8 +1,9 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
-import { getDb, rooms, type Room } from "@/db";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { getDb, rooms, type Database, type DbTransaction, type Room } from "@/db";
 
 export const HOST_COOKIE = "theminute_host";
+export const HOST_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 export const FREE_SLOT_SECONDS = 60;
 export const PERSON_SECONDS = FREE_SLOT_SECONDS;
 export const FREE_MAX_PEOPLE = 6;
@@ -103,6 +104,16 @@ export function applyFreeLimits(room: Room) {
   };
 }
 
+export function hostCookieOptions() {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: HOST_COOKIE_MAX_AGE,
+  };
+}
+
 export function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -168,13 +179,67 @@ export function publicRoom(room: Room, hostToken?: string): PublicRoom {
   };
 }
 
-export async function findHostRoom(hostToken: string) {
-  const db = getDb();
+type RoomsDb = Database | DbTransaction;
+
+export async function findHostRoom(hostToken: string, db: RoomsDb = getDb()) {
   return (
     (await db.query.rooms.findFirst({
       where: eq(rooms.hostTokenHash, hashToken(hostToken)),
     })) ?? null
   );
+}
+
+export async function findPaidRoomsByEmail(
+  email: string,
+  db: RoomsDb = getDb(),
+) {
+  return db
+    .select()
+    .from(rooms)
+    .where(and(eq(rooms.paidEmail, email), eq(rooms.paid, true)))
+    .orderBy(desc(rooms.updatedAt));
+}
+
+export function canClaimPaidRoom(
+  current: Pick<Room, "paid" | "paidEmail" | "code"> | null,
+  target: Pick<Room, "paid" | "paidEmail" | "code"> | null,
+) {
+  if (!current || !target) return false;
+  if (!current.paid || !target.paid) return false;
+  if (!current.paidEmail || !target.paidEmail) return false;
+  return current.paidEmail === target.paidEmail;
+}
+
+export async function rotateHostToken(code: string, db: RoomsDb = getDb()) {
+  const token = makeHostToken();
+  const [updated] = await db
+    .update(rooms)
+    .set({
+      hostTokenHash: hashToken(token),
+      updatedAt: new Date(),
+    })
+    .where(eq(rooms.code, code))
+    .returning({ code: rooms.code });
+  if (!updated) throw new Error("Room not found.");
+  return token;
+}
+
+export async function claimPaidRoomHost(
+  hostToken: string,
+  code: string,
+  db: RoomsDb = getDb(),
+) {
+  const current = await findHostRoom(hostToken, db);
+  const target =
+    (await db.query.rooms.findFirst({ where: eq(rooms.code, code) })) ?? null;
+  if (!canClaimPaidRoom(current, target) || !current || !target) {
+    throw new Error("Host this stand-up with the email from Stripe checkout.");
+  }
+  if (current.code === target.code) {
+    return { token: hostToken, room: target };
+  }
+  const token = await rotateHostToken(target.code, db);
+  return { token, room: target };
 }
 
 export async function joinRoom(code: string, name: string) {

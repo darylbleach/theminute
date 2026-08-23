@@ -188,6 +188,19 @@ export function RoomTimer({
             </p>
           ) : null}
 
+          {room?.paid && !room.isHost ? (
+            <p className="mt-5 max-w-md font-mono text-[11px] uppercase tracking-[0.16em] text-mute">
+              Host this stand-up from another computer?{" "}
+              <Link
+                href="/login"
+                className="text-paper/80 underline underline-offset-4 hover:text-acid"
+              >
+                Open my rooms
+              </Link>{" "}
+              with the Stripe email.
+            </p>
+          ) : null}
+
           {room?.isHost ? (
             <div className="mt-7 flex flex-col items-center gap-4 md:items-start">
               <div className="flex gap-3">

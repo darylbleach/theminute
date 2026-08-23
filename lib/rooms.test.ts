@@ -11,11 +11,17 @@ import {
   slotLabel,
   slotSecondsFor,
 } from "./rooms";
+import type Stripe from "stripe";
 import {
+  isLiveRoomSubscriptionStatus,
   isPaidRoomMetadata,
   isRoomPlan,
+  needsSubscriptionStatusForInvoicePaid,
   roomCheckoutMetadata,
   roomPlanPrice,
+  shouldMarkRoomPaidFromCheckout,
+  shouldMarkRoomPaidFromInvoice,
+  subscriptionStatusFromInvoice,
 } from "./room-billing";
 
 test("normalizes room and roster names", () => {
@@ -115,4 +121,162 @@ test("classifies paid-room Stripe metadata without touching auction sessions", (
   assert.equal(roomPlanPrice("once").unitAmount, 1900);
   assert.equal(roomPlanPrice("once").currency, "gbp");
   assert.equal(roomPlanPrice("monthly").unitAmount, 300);
+});
+
+test("checkout.session.completed only marks paid rooms when Stripe says paid", () => {
+  assert.equal(
+    shouldMarkRoomPaidFromCheckout("checkout.session.completed", "paid"),
+    true,
+  );
+  assert.equal(
+    shouldMarkRoomPaidFromCheckout("checkout.session.completed", "unpaid"),
+    false,
+  );
+  assert.equal(
+    shouldMarkRoomPaidFromCheckout(
+      "checkout.session.completed",
+      "no_payment_required",
+    ),
+    false,
+  );
+  assert.equal(
+    shouldMarkRoomPaidFromCheckout("invoice.paid", "paid"),
+    false,
+  );
+});
+
+test("checkout.session.async_payment_succeeded can still mark a room paid", () => {
+  assert.equal(
+    shouldMarkRoomPaidFromCheckout(
+      "checkout.session.async_payment_succeeded",
+      "paid",
+    ),
+    true,
+  );
+  assert.equal(
+    shouldMarkRoomPaidFromCheckout(
+      "checkout.session.async_payment_succeeded",
+      "unpaid",
+    ),
+    true,
+  );
+});
+
+test("invoice.paid does not revive a room after the stored subscription is cleared", () => {
+  assert.equal(
+    shouldMarkRoomPaidFromInvoice({
+      storedSubscriptionId: null,
+      invoiceSubscriptionId: "sub_123",
+      subscriptionStatus: "canceled",
+    }),
+    false,
+  );
+  assert.equal(
+    shouldMarkRoomPaidFromInvoice({
+      storedSubscriptionId: null,
+      invoiceSubscriptionId: "sub_123",
+      subscriptionStatus: "incomplete_expired",
+    }),
+    false,
+  );
+  assert.equal(
+    shouldMarkRoomPaidFromInvoice({
+      storedSubscriptionId: null,
+      invoiceSubscriptionId: "sub_123",
+      subscriptionStatus: "unpaid",
+    }),
+    false,
+  );
+});
+
+test("invoice.paid marks the room when the stored subscription still matches", () => {
+  assert.equal(
+    shouldMarkRoomPaidFromInvoice({
+      storedSubscriptionId: "sub_123",
+      invoiceSubscriptionId: "sub_123",
+      subscriptionStatus: null,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldMarkRoomPaidFromInvoice({
+      storedSubscriptionId: "sub_123",
+      invoiceSubscriptionId: "sub_123",
+      subscriptionStatus: "canceled",
+    }),
+    true,
+  );
+});
+
+test("invoice.paid marks the room when Stripe still shows a live subscription", () => {
+  for (const status of ["active", "trialing", "past_due"] as const) {
+    assert.equal(isLiveRoomSubscriptionStatus(status), true);
+    assert.equal(
+      shouldMarkRoomPaidFromInvoice({
+        storedSubscriptionId: null,
+        invoiceSubscriptionId: "sub_new",
+        subscriptionStatus: status,
+      }),
+      true,
+    );
+  }
+  assert.equal(isLiveRoomSubscriptionStatus("canceled"), false);
+  assert.equal(isLiveRoomSubscriptionStatus(null), false);
+});
+
+test("invoice.paid retrieves subscription status when it is missing and ids do not match", () => {
+  assert.equal(
+    needsSubscriptionStatusForInvoicePaid({
+      storedSubscriptionId: "sub_123",
+      invoiceSubscriptionId: "sub_123",
+      subscriptionStatus: null,
+    }),
+    false,
+  );
+  assert.equal(
+    needsSubscriptionStatusForInvoicePaid({
+      storedSubscriptionId: null,
+      invoiceSubscriptionId: "sub_123",
+      subscriptionStatus: "canceled",
+    }),
+    false,
+  );
+  assert.equal(
+    needsSubscriptionStatusForInvoicePaid({
+      storedSubscriptionId: null,
+      invoiceSubscriptionId: "sub_123",
+      subscriptionStatus: null,
+    }),
+    true,
+  );
+  assert.equal(
+    needsSubscriptionStatusForInvoicePaid({
+      storedSubscriptionId: "sub_old",
+      invoiceSubscriptionId: "sub_new",
+      subscriptionStatus: null,
+    }),
+    true,
+  );
+});
+
+test("reads subscription status from an expanded invoice, otherwise not", () => {
+  assert.equal(
+    subscriptionStatusFromInvoice({
+      parent: {
+        subscription_details: { subscription: "sub_123" },
+      },
+    } as Stripe.Invoice),
+    null,
+  );
+  assert.equal(
+    subscriptionStatusFromInvoice({
+      parent: {
+        subscription_details: {
+          subscription: { id: "sub_123", status: "active" },
+        },
+      },
+    } as Stripe.Invoice),
+    "active",
+  );
+  assert.equal(subscriptionStatusFromInvoice({} as Stripe.Invoice), null);
 });

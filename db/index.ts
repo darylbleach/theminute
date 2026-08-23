@@ -33,4 +33,5 @@ export function getDb() {
 }
 
 export type Database = Db;
+export type DbTransaction = Parameters<Parameters<Db["transaction"]>[0]>[0];
 export * from "./schema";

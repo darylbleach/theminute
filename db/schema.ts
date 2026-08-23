@@ -108,6 +108,12 @@ export const rooms = pgTable(
     currentIndex: integer("current_index").notNull().default(0),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
     hostTokenHash: text("host_token_hash").notNull(),
+    paid: boolean("paid").notNull().default(false),
+    slotSeconds: integer("slot_seconds").notNull().default(60),
+    paidEmail: text("paid_email"),
+    stripeCustomerId: text("stripe_customer_id"),
+    stripeSubscriptionId: text("stripe_subscription_id"),
+    stripeSessionId: text("stripe_session_id"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -118,6 +124,7 @@ export const rooms = pgTable(
   (table) => [
     uniqueIndex("rooms_host_token_hash_uidx").on(table.hostTokenHash),
     index("rooms_updated_at_idx").on(table.updatedAt),
+    index("rooms_stripe_subscription_id_idx").on(table.stripeSubscriptionId),
   ],
 );
 

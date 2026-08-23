@@ -12,6 +12,8 @@ export function contactEmail() {
   return process.env.CONTACT_EMAIL ?? `hello@${SITE_HOST}`;
 }
 
+export const ROOM_ONCE_CENTS = 1900;
+export const ROOM_MONTHLY_CENTS = 300;
 export const CENTS_PER_MINUTE = 100;
 export const MIN_MINUTES = 5;
 export const MAX_MINUTES = 24 * 60;

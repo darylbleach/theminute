@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { SITE_NAME } from "@/lib/config";
 
 export const runtime = "nodejs";
-export const alt = "The Minute — a one-minute standup timer";
+export const alt = "The Minute — a one-minute stand-up timer";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

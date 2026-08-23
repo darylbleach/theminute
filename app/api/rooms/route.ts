@@ -4,18 +4,43 @@ import { getDb, rooms } from "@/db";
 import {
   cleanRoomName,
   cleanRoster,
+  findHostRoom,
   hashToken,
   HOST_COOKIE,
   makeHostToken,
   makeRoomCode,
-  PERSON_SECONDS,
+  maxPeopleFor,
+  publicRoom,
+  slotSecondsFor,
 } from "@/lib/rooms";
+
+async function hostTokenFromCookie() {
+  return (await cookies()).get(HOST_COOKIE)?.value;
+}
+
+export async function GET() {
+  const token = await hostTokenFromCookie();
+  if (!token) {
+    return Response.json({ room: null }, {
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
+  try {
+    const room = await findHostRoom(token);
+    return Response.json(
+      { room: room ? publicRoom(room, token) : null },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch {
+    return Response.json({ room: null }, {
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
+}
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as { name?: unknown; roster?: unknown };
-    const name = cleanRoomName(body.name);
-    const roster = cleanRoster(body.roster);
     const cookieStore = await cookies();
     let hostToken = cookieStore.get(HOST_COOKIE)?.value;
 
@@ -35,7 +60,10 @@ export async function POST(request: Request) {
     const existing = await db.query.rooms.findFirst({
       where: eq(rooms.hostTokenHash, hostTokenHash),
     });
-    const endsAt = new Date(Date.now() + PERSON_SECONDS * 1000);
+    const name = cleanRoomName(body.name);
+    const roster = cleanRoster(body.roster, existing ? maxPeopleFor(existing) : 6);
+    const slot = existing ? slotSecondsFor(existing) : 60;
+    const endsAt = new Date(Date.now() + slot * 1000);
 
     if (existing) {
       await db

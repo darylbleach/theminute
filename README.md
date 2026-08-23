@@ -1,34 +1,34 @@
 # The Minute
 
-`$1` buys one minute of the entire homepage. Not a row. Not a rank. The whole page, with a public countdown. When the clock hits zero, the next paid URL slams in.
+The Minute is a shared standup timer: create a room, share its link, and give
+each person 60 seconds before the clock automatically moves to the next name.
+No account is required.
 
 Live at [theminute.lol](https://theminute.lol).
 
-## Mechanic
+## MVP
 
-1. **$1 = 1 minute.** Minimum 5. URL, logo, and one line of copy.
-2. **The queue is public.** Everyone sees who is next.
-3. **Cutting the line** costs 2× the remaining minutes of everyone skipped. 80% of that premium is site credit for the people you jumped. 20% is the house.
-4. **Defend live.** The current holder can add minutes while the clock is running.
-5. **Every reign is archived.** Longest reign cannot be bought retroactively.
-
-This is paid advertising placement, not a contest. No refunds. Credits are site credit, not cash.
+1. Name a room and add a running order of up to six people.
+2. Share the `/r/[code]` link across phones, laptops, or a meeting-room TV.
+3. The Neon-backed clock stays in sync across devices and advances every minute.
+4. The creating browser is the host and can skip or restart a speaker.
+5. The last roster is remembered in that browser.
 
 ## Stack
 
-Next.js on Vercel, Stripe Checkout, Neon Postgres.
+Next.js on Vercel, Neon Postgres with Drizzle, and polling once per second.
+The previous Stripe auction routes remain in the repository but are not linked
+from the homepage.
 
 ## Setup
 
 ```bash
 cp .env.example .env.local
-# fill DATABASE_URL and Stripe keys
+# fill DATABASE_URL (Stripe keys are only needed for the legacy auction routes)
 npm install
 npm run db:push
-npm run db:seed
 npm run dev
 ```
 
-Stripe webhook endpoint: `/api/stripe/webhook`  
-Kill switch: `/admin/kill` with `KILL_SECRET`  
-Clock advance: Vercel Cron hits `/api/tick` every minute
+Open the homepage, create a room, then open its share link in a private window
+or on another device to test joining and clock synchronization.

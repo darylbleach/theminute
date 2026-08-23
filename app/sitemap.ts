@@ -3,11 +3,9 @@ import { siteUrl } from "@/lib/config";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = siteUrl();
-  return ["", "/buy", "/queue", "/archive", "/longest", "/terms"].map(
-    (path) => ({
-      url: `${base}${path}`,
-      changeFrequency: path === "" ? "always" : "hourly",
-      priority: path === "" ? 1 : 0.6,
-    }),
-  );
+  return ["", "/terms"].map((path) => ({
+    url: `${base}${path}`,
+    changeFrequency: path === "" ? "weekly" : "yearly",
+    priority: path === "" ? 1 : 0.3,
+  }));
 }

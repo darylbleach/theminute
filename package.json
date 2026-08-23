@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import tsx --test lib/money.test.ts",
+    "test": "node --import tsx --test lib/*.test.ts",
     "db:push": "dotenv -e .env.local -- drizzle-kit push",
     "db:seed": "dotenv -e .env.local -- tsx scripts/seed.ts",
     "house-ad": "dotenv -e .env.local -- tsx scripts/house-ad.ts",

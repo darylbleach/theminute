@@ -2,6 +2,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -98,5 +99,28 @@ export const siteState = pgTable("site_state", {
     .notNull(),
 });
 
+export const rooms = pgTable(
+  "rooms",
+  {
+    code: text("code").primaryKey(),
+    name: text("name").notNull(),
+    roster: jsonb("roster").$type<string[]>().notNull(),
+    currentIndex: integer("current_index").notNull().default(0),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    hostTokenHash: text("host_token_hash").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("rooms_host_token_hash_uidx").on(table.hostTokenHash),
+    index("rooms_updated_at_idx").on(table.updatedAt),
+  ],
+);
+
 export type Reign = typeof reigns.$inferSelect;
 export type NewReign = typeof reigns.$inferInsert;
+export type Room = typeof rooms.$inferSelect;

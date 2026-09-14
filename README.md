@@ -40,3 +40,7 @@ npm run dev
 
 Open the homepage, create a room, then open its share link in a private window
 or on another device to test joining and clock synchronization.
+
+## License
+
+[MIT](LICENSE) — OSI-approved.

@@ -43,4 +43,5 @@ or on another device to test joining and clock synchronization.
 
 ## License
 
-[MIT](LICENSE) — OSI-approved.
+[MIT](LICENSE) — OSI-approved. See the
+[Code of Conduct](CODE_OF_CONDUCT.md).
